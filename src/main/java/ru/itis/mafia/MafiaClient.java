@@ -1,89 +1,29 @@
 package ru.itis.mafia;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
-
 import java.io.*;
 import java.net.Socket;
 import java.util.Random;
+import java.util.Scanner;
+import java.util.UUID;
 
-public class MafiaClient extends Application {
+public class MafiaClient {
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private Socket socket;
+    private String id;
     private String username;
-    private TextArea chatArea;
+    private boolean isDead = false;
+    private String role;
 
-    public MafiaClient (Socket socket){
+    public MafiaClient(Socket socket) {
         try {
             this.socket = socket;
-            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.username = "Player " + new Random().nextInt(1000);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+            this.id = UUID.randomUUID().toString();
 
-    public static void main(String[] args) {
-        launch(args);
-    }
-
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        // Отправляем имя пользователя на сервер
-        sendUsername();
-        // Запускаем поток для приема сообщений
-        listenForMessage();
-
-        // Создаем основной контейнер VBox
-        VBox root = new VBox(10); // Отступы между элементами 10 пикселей
-        root.setStyle("-fx-padding: 10; -fx-background-color: #f0f0f0;");
-
-        // Заголовок окна
-        primaryStage.setTitle("Mafia Game - " + username);
-
-        // Поле для чата
-        chatArea = new TextArea();
-        chatArea.setEditable(false); // Чат только для чтения
-        chatArea.setPrefRowCount(10);
-
-        // Поле ввода сообщения и кнопка отправки
-        TextField messageField = new TextField();
-        messageField.setOnAction(event -> {
-            String message = messageField.getText();
-            if (!message.isEmpty()) {
-                sendMessage(message);
-                messageField.clear();
-            }
-        });
-
-        // Группируем поле ввода и кнопку отправки
-        HBox inputBox = new HBox(10);
-        inputBox.getChildren().addAll(messageField);
-
-        // Добавляем все элементы в корневой контейнер
-        root.getChildren().addAll(
-                new Label("Chat:"),
-                chatArea,
-                inputBox
-        );
-
-        // Создаем сцену и показываем окно
-        Scene scene = new Scene(root, 600, 400);
-        primaryStage.setScene(scene);
-        primaryStage.show();
-    }
-
-    private void sendUsername() {
-        try {
+            // Отправляем серверу имя пользователя
             bufferedWriter.write(username);
             bufferedWriter.newLine();
             bufferedWriter.flush();
@@ -92,13 +32,31 @@ public class MafiaClient extends Application {
         }
     }
 
-    public void sendMessage(String message) {
-        try {
-            bufferedWriter.write(username + ": " + message);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
+    public static void main(String[] args) throws IOException {
+        Socket socket = new Socket("localhost", 1234);
+        MafiaClient client = new MafiaClient(socket);
+        client.listenForMessage();
+        client.sendMessage();
+    }
 
-            Platform.runLater(() -> chatArea.appendText("You" + ": " + message + "\n"));
+    public void sendMessage() {
+        try (Scanner scanner = new Scanner(System.in)) {
+            while (socket.isConnected()) {
+                if (!isDead) {
+                    String messageToSend = scanner.nextLine();
+
+                    if (!messageToSend.startsWith("/")) {
+                        bufferedWriter.write(username + ": " + messageToSend);
+                    } else {
+                        bufferedWriter.write(messageToSend);
+                    }
+
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
+                } else {
+                    System.out.println("Вы мертвы и не можете отправлять сообщения.");
+                }
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -108,10 +66,20 @@ public class MafiaClient extends Application {
         new Thread(() -> {
             while (socket.isConnected()) {
                 try {
-                    String msgFromGroupChat = bufferedReader.readLine();
-                    if (msgFromGroupChat != null) {
-                        // Обновляем чат через Platform.runLater()
-                        Platform.runLater(() -> chatArea.appendText(msgFromGroupChat + "\n"));
+                    String msgFromServer = bufferedReader.readLine();
+                    if (msgFromServer == null) continue;
+
+                    if (msgFromServer.startsWith("/set role")) {
+                        this.role = msgFromServer.substring(10);
+                        System.out.println("SERVER: Ваша роль - " + this.role);
+                    } else if (msgFromServer.startsWith("/kill")) {
+                        String killedPlayer = msgFromServer.substring(6);
+                        if (username.equals(killedPlayer)) {
+                            isDead = true;
+                            System.out.println("SERVER: Вы были убиты!");
+                        }
+                    } else {
+                        System.out.println(msgFromServer);
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -120,3 +88,4 @@ public class MafiaClient extends Application {
         }).start();
     }
 }
+
