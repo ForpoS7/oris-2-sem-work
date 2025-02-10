@@ -124,7 +124,7 @@
             <!-- Default configuration for running with: mvn clean javafx:run -->
             <id>default-cli</id>
             <configuration>
-              <mainClass>ru.itis.mafia/ru.itis.mafia.MafiaClient</mainClass>
+              <mainClass>ru.itis.mafia/ru.itis.mafia.MafiaLauncher</mainClass>
               <launcher>app</launcher>
               <jlinkZipName>app</jlinkZipName>
               <jlinkImageName>app</jlinkImageName>
