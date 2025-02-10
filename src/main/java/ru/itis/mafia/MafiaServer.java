@@ -52,9 +52,6 @@ public class MafiaServer {
 
             Handler.serverMessage("/night");
             Handler.serverMessage("SERVER: Ночь! Мафия выбирает жертву.");
-            for (Handler client : clientHandlers) {
-                client.setDay(false);
-            }
 
             try {
                 Thread.sleep(31000);
@@ -77,9 +74,6 @@ public class MafiaServer {
 
             Handler.serverMessage("/day");
             Handler.serverMessage("SERVER: День! Мирные голосуют.");
-            for (Handler client : clientHandlers) {
-                client.setDay(true);
-            }
 
             try {
                 Thread.sleep(31000);
