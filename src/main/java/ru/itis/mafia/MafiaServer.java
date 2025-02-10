@@ -49,12 +49,15 @@ public class MafiaServer {
 
     private static void startGame() {
         while (!mafiaPlayer.isEmpty() && peacefulPlayer.size() != mafiaPlayer.size()) {
-            // Фаза ночи
+
             Handler.serverMessage("/night");
             Handler.serverMessage("SERVER: Ночь! Мафия выбирает жертву.");
+            for (Handler client : clientHandlers) {
+                client.setDay(false);
+            }
 
             try {
-                Thread.sleep(31000); // Время на голосование
+                Thread.sleep(31000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -64,18 +67,22 @@ public class MafiaServer {
                 Handler.serverMessage("/remove " + victim);
                 Handler.serverMessage("SERVER: Мафия убила " + victim);
                 removePlayer(victim);
+            } else {
+                Handler.serverMessage("SERVER: Никого не убили!");
             }
 
             if (peacefulPlayer.size() == mafiaPlayer.size()) {
                 break;
             }
 
-            // Фаза дня
             Handler.serverMessage("/day");
             Handler.serverMessage("SERVER: День! Мирные голосуют.");
+            for (Handler client : clientHandlers) {
+                client.setDay(true);
+            }
 
             try {
-                Thread.sleep(31000); // Время на голосование
+                Thread.sleep(31000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -85,6 +92,8 @@ public class MafiaServer {
                 Handler.serverMessage("/remove " + votedOut);
                 Handler.serverMessage("SERVER: Игрок " + votedOut + " был изгнан!");
                 removePlayer(votedOut);
+            } else {
+                Handler.serverMessage("SERVER: Никого не изгнали!");
             }
         }
         Handler.serverMessage("/endGame");
@@ -101,11 +110,10 @@ public class MafiaServer {
 
         for (Handler voter : voters) {
             String votedPlayer = voter.getVotePlayer();
-            if (votedPlayer == null) {
-                votedPlayer = victims.get(random.nextInt(victims.size())).getUsername();
+            if (votedPlayer != null) {
+                votes.put(votedPlayer, votes.getOrDefault(votedPlayer, 0) + 1);
+                voter.setVotePlayer(null);
             }
-            votes.put(votedPlayer, votes.getOrDefault(votedPlayer, 0) + 1);
-            voter.setVotePlayer(null);
         }
 
         if (votes.isEmpty()) return null;
@@ -118,7 +126,7 @@ public class MafiaServer {
             }
         }
 
-        return topVoted.get(random.nextInt(topVoted.size())); // Если ничья — выбираем случайно
+        return topVoted.get(random.nextInt(topVoted.size()));
     }
 
     private static void removePlayer(String playerName) {

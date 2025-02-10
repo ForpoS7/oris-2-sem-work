@@ -12,6 +12,7 @@ public class Handler implements Runnable{
     private String username;
     private String role;
     private String votePlayer;
+    private boolean isDay;
 
     public Handler(Socket socket) {
         try {
@@ -96,5 +97,13 @@ public class Handler implements Runnable{
 
     public void setVotePlayer(String votePlayer) {
         this.votePlayer = votePlayer;
+    }
+
+    public void setDay(boolean day) {
+        isDay = day;
+    }
+
+    public boolean isDay() {
+        return isDay;
     }
 }
