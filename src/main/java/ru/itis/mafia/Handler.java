@@ -12,7 +12,6 @@ public class Handler implements Runnable{
     private String username;
     private String role;
     private String votePlayer;
-    private boolean isDay;
 
     public Handler(Socket socket) {
         try {
@@ -21,7 +20,6 @@ public class Handler implements Runnable{
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.username = bufferedReader.readLine();
             clientHandlers.add(this);
-//            broadcastMessage("SERVER: " + username + " подключился");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -90,10 +88,6 @@ public class Handler implements Runnable{
 
     public String getUsername() {
         return username;
-    }
-
-    public void setDay(boolean isDay) {
-        this.isDay = isDay;
     }
 
     public String getVotePlayer() {

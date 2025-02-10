@@ -14,19 +14,13 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Line;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class MafiaClient extends Application {
@@ -40,16 +34,15 @@ public class MafiaClient extends Application {
     private BufferedWriter bufferedWriter;
     private Socket socket;
 
-    private static final double AVATAR_SIZE = 100; // Размер аватарки
-    private static final String DEFAULT_AVATAR = "/Игрок.png"; // Общая аватарка
-    private static final String MAFIA_AVATAR = "/Мафия.png"; // Аватарка мафии
-    private static final String PEACEFUL_AVATAR = "/Мирный.png"; // Аватарка мирного жителя
+    private static final double AVATAR_SIZE = 100;
+    private static final String DEFAULT_AVATAR = "/Игрок.png";
+    private static final String MAFIA_AVATAR = "/Мафия.png";
+    private static final String PEACEFUL_AVATAR = "/Мирный.png";
     private static final int MAX_PLAYERS = 4;
-    private static final int GRID_COLUMNS = MAX_PLAYERS / 2; // Количество колонок в сетке
+    private static final int GRID_COLUMNS = MAX_PLAYERS / 2;
 
     private String username;
     private boolean isDead = false;
-    // Флаг для управления состоянием таймера
     private boolean isGameRunning = true;
 
     public MafiaClient(Socket socket) {
@@ -59,7 +52,6 @@ public class MafiaClient extends Application {
             bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             username = "Игрок " + new Random().nextInt(1000);
 
-            // Отправляем серверу имя пользователя
             sendUsername();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -72,24 +64,19 @@ public class MafiaClient extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // Заголовок окна
         primaryStage.setTitle("Игра Мафия - " + username);
 
-        // Главный контейнер (BorderPane)
         root = new BorderPane();
         root.setPadding(new Insets(10));
 
-        // Правая часть: чат
-        VBox chatContainer = new VBox(10); // Контейнер для чата
+        VBox chatContainer = new VBox(10);
         chatContainer.setPadding(new Insets(10));
 
-        // Область для отображения сообщений
         chatArea = new TextArea();
         chatArea.setPrefRowCount(15);
-        chatArea.setEditable(false); // Только для чтения
+        chatArea.setEditable(false);
         chatArea.setPrefWidth(300);
 
-        // Поле для ввода сообщений
         TextField messageField = new TextField();
         messageField.setPromptText("Введите сообщение...");
         messageField.setOnAction(event -> {
@@ -100,48 +87,39 @@ public class MafiaClient extends Application {
             }
         });
 
-        // Таймер
-        Label timerLabel = new Label("00:30"); // Начальное значение таймера
+        Label timerLabel = new Label("00:30");
         timerLabel.setFont(new Font("Arial", 32));
 
-        // Добавляем элементы в контейнер чата
         chatContainer.getChildren().addAll(chatArea, messageField, timerLabel);
 
-        // Левая часть: игроки
         GridPane playerGrid = new GridPane();
-        playerGrid.setHgap(10); // Горизонтальный отступ между игроками
-        playerGrid.setVgap(10); // Вертикальный отступ между игроками
+        playerGrid.setHgap(10);
+        playerGrid.setVgap(10);
         playerGrid.setPadding(new Insets(10));
 
-        // Панель для голосования
         votePanel = new VBox(10);
         votePanel.setPadding(new Insets(10));
         voteComboBox = new ComboBox<>();
         Button voteButton = new Button("Голосовать");
 
-        // Добавляем панель голосования в правую часть
         chatContainer.getChildren().add(votePanel);
         votePanel.getChildren().addAll(new Label("Выберите игрока:"), voteComboBox, voteButton);
 
-        // Добавляем элементы в главный контейнер
-        root.setLeft(playerGrid); // Левая часть (игроки)
-        root.setRight(chatContainer); // Правая часть (чат)
+        root.setLeft(playerGrid);
+        root.setRight(chatContainer);
 
         listenForMessage();
 
         Thread.sleep(1000);
 
-        // Добавляем игроков в сетку
         addPlayersToGrid(playerGrid);
 
-        // Создаем сцену и устанавливаем её на Stage
         Scene scene = new Scene(root, 1200, 800);
         primaryStage.setScene(scene);
         primaryStage.show();
 
         initializeTimer(timerLabel);
 
-        // Настройка голосования
         setupVoting(voteComboBox, voteButton);
     }
 
@@ -163,118 +141,101 @@ public class MafiaClient extends Application {
     }
 
     private void setupVoting(ComboBox<String> voteComboBox, Button voteButton) {
-        // Обновляем список игроков для голосования
         updateVoteCandidates(voteComboBox);
 
-        // Обработка нажатия на кнопку "Голосовать"
         voteButton.setOnAction(event -> {
             String selectedPlayer = voteComboBox.getValue();
             if (selectedPlayer != null && !selectedPlayer.isEmpty()) {
                 sendMessage("/vote " + selectedPlayer);
-                voteComboBox.setValue(null); // Очищаем выбор после голосования
+                voteComboBox.setValue(null);
             } else {
                 Platform.runLater(() -> chatArea.appendText("SERVER: Выберите игрока для голосования.\n"));
             }
         });
     }
 
-    // Метод для обновления списка кандидатов для голосования
     private void updateVoteCandidates(ComboBox<String> voteComboBox) {
-        voteComboBox.getItems().clear(); // Очищаем текущий список
+        voteComboBox.getItems().clear();
         for (String playerName : playerMap.keySet()) {
-            if (!playerName.equals(username)) { // Исключаем самого игрока
+            if (!playerName.equals(username)) {
                 voteComboBox.getItems().add(playerName);
             }
         }
     }
 
-    // Метод для инициализации таймера
     private void initializeTimer(Label timerLabel) {
-        int[] totalTimeInSeconds = {30}; // Время одного этапа (30 секунд), используем массив для изменения значения
+        int[] totalTimeInSeconds = {30};
 
         timeline = new Timeline(
                 new KeyFrame(
-                        Duration.seconds(1), // Интервал обновления (каждую секунду)
+                        Duration.seconds(1),
                         event -> {
                             if (isGameRunning && totalTimeInSeconds[0] > 0) {
-                                totalTimeInSeconds[0]--; // Уменьшаем время на 1 секунду
-                                String formattedTime = String.format("%02d:%02d", 0, totalTimeInSeconds[0]); // Форматируем время
-                                Platform.runLater(() -> timerLabel.setText(formattedTime)); // Обновляем текст таймера
+                                totalTimeInSeconds[0]--;
+                                String formattedTime = String.format("%02d:%02d", 0, totalTimeInSeconds[0]);
+                                Platform.runLater(() -> timerLabel.setText(formattedTime));
                             } else if (totalTimeInSeconds[0] == 0 && isGameRunning) {
-                                // Если время истекло, но игра еще не завершена, перезапускаем таймер
-                                totalTimeInSeconds[0] = 30; // Сбрасываем время обратно на 30 секунд
-                                String formattedTime = String.format("%02d:%02d", 0, totalTimeInSeconds[0]); // Форматируем время
-                                Platform.runLater(() -> timerLabel.setText(formattedTime)); // Обновляем текст таймера
+                                totalTimeInSeconds[0] = 30;
+                                String formattedTime = String.format("%02d:%02d", 0, totalTimeInSeconds[0]);
+                                Platform.runLater(() -> timerLabel.setText(formattedTime));
                             } else if (!isGameRunning) {
-                                stopTimer(timeline); // Останавливаем таймер при завершении игры
+                                stopTimer(timeline);
                             }
                         }
                 )
         );
-        timeline.setCycleCount(Animation.INDEFINITE); // Бесконечный цикл
-        timeline.play(); // Запускаем таймер
+        timeline.setCycleCount(Animation.INDEFINITE);
+        timeline.play();
     }
 
-    // Метод для остановки таймера
     private void stopTimer(Timeline timeline) {
         if (timeline != null) {
-            timeline.stop(); // Останавливаем таймер
+            timeline.stop();
         }
     }
 
-    // Метод для добавления игроков в сетку
     private void addPlayersToGrid(GridPane gridPane) {
-        // Определяем роль клиента
         String clientRole = playerMap.get(this.username);
 
-        int row = 0; // Стартовая строка для размещения игроков
-        int col = 0; // Стартовый столбец для размещения игроков
+        int row = 0;
+        int col = 0;
 
         for (Map.Entry<String, String> entry : playerMap.entrySet()) {
 
-            // Получаем ник и роль игрока
             String username = entry.getKey();
             String role = entry.getValue();
 
             String avatarPath = DEFAULT_AVATAR;
-            ;
             if ("Мафия".equals(clientRole)) {
-                // Если клиент является Мафией
                 if ("Мафия".equals(role)) {
-                    avatarPath = MAFIA_AVATAR; // Все мафии получают аватарку Мафии
+                    avatarPath = MAFIA_AVATAR;
                 } else {
-                    avatarPath = PEACEFUL_AVATAR; // Остальные игроки — аватарка Мирного
+                    avatarPath = PEACEFUL_AVATAR;
                 }
             } else if ("Мирный".equals(clientRole)) {
-                // Если клиент является Мирным
                 if (this.username.equals(username)) {
-                    avatarPath = PEACEFUL_AVATAR; // Клиент получает аватарку Мирного
+                    avatarPath = PEACEFUL_AVATAR;
                 } else {
-                    avatarPath = DEFAULT_AVATAR; // Остальные игроки — дефолтная аватарка
+                    avatarPath = DEFAULT_AVATAR;
                 }
             }
 
-            // Загружаем аватарку игрока
             Image avatarImage = new Image(getClass().getResourceAsStream(avatarPath));
             ImageView avatarView = new ImageView(avatarImage);
-            avatarView.setFitWidth(AVATAR_SIZE); // Устанавливаем размер аватарки
-            avatarView.setPreserveRatio(true); // Сохраняем пропорции
+            avatarView.setFitWidth(AVATAR_SIZE);
+            avatarView.setPreserveRatio(true);
 
-            // Создаем метку с ником игрока
             Label nicknameLabel = new Label(username);
             nicknameLabel.setFont(new Font(16));
 
-            // Группируем аватарку и метку в VBox
             VBox playerBox = new VBox(10);
             playerBox.setAlignment(Pos.CENTER);
             playerBox.getChildren().addAll(avatarView, nicknameLabel);
 
-            // Добавляем группу в сетку
             gridPane.add(playerBox, col, row);
 
-            // Обновляем колонку и строку для следующего игрока
             col++;
-            if (col >= GRID_COLUMNS) { // Если достигнут лимит колонок, переходим на новую строку
+            if (col >= GRID_COLUMNS) {
                 col = 0;
                 row++;
             }
@@ -344,7 +305,6 @@ public class MafiaClient extends Application {
                 }
             }
         } else if ("/night".equals(msgFromGroupChat)) {
-            // Фаза ночи: только Мафия может голосовать
             if ("Мафия".equals(playerMap.get(username))) {
                 Platform.runLater(() -> {
                     votePanel.setVisible(true);
@@ -357,7 +317,6 @@ public class MafiaClient extends Application {
                 });
             }
         } else if ("/day".equals(msgFromGroupChat)) {
-            // Фаза дня: все могут голосовать
             if (!isDead) {
                 Platform.runLater(() -> {
                     votePanel.setVisible(true);
@@ -370,23 +329,18 @@ public class MafiaClient extends Application {
                 });
             }
         } else if ("/endGame".equals(msgFromGroupChat)) {
-            // Останавливаем таймер при завершении игры
             isGameRunning = false;
         } else if (msgFromGroupChat.startsWith("/remove")) {
-            // Игрок был удален
             String removedPlayer = msgFromGroupChat.substring(8); // Извлекаем имя удаленного игрока
 
-            // Удаляем игрока из GridPane
             Platform.runLater(() -> markPlayerAsDead((GridPane) root.getLeft(), removedPlayer));
 
-            // Удаляем игрока из мапы
             playerMap.remove(removedPlayer);
 
             if (removedPlayer.equals(username)) {
                 isDead = true;
             }
 
-            // Обновляем панель голосования
             updateVoteCandidates(voteComboBox);
         } else {
             Platform.runLater(() -> chatArea.appendText(msgFromGroupChat + "\n"));

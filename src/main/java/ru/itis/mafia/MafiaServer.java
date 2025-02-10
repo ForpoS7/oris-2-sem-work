@@ -52,12 +52,9 @@ public class MafiaServer {
             // Фаза ночи
             Handler.serverMessage("/night");
             Handler.serverMessage("SERVER: Ночь! Мафия выбирает жертву.");
-            for (Handler client : clientHandlers) {
-                client.setDay(false);
-            }
 
             try {
-                Thread.sleep(31000); // Время на голосование (30 секунд)
+                Thread.sleep(31000); // Время на голосование
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -76,19 +73,16 @@ public class MafiaServer {
             // Фаза дня
             Handler.serverMessage("/day");
             Handler.serverMessage("SERVER: День! Мирные голосуют.");
-            for (Handler client : clientHandlers) {
-                client.setDay(true);
-            }
 
             try {
-                Thread.sleep(31000); // Время на голосование (30 секунд)
+                Thread.sleep(31000); // Время на голосование
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
             String votedOut = voteForKill(clientHandlers, clientHandlers);
             if (votedOut != null) {
-                Handler.serverMessage("/remove " + votedOut); // Отправляем команду для удаления игрока
+                Handler.serverMessage("/remove " + votedOut);
                 Handler.serverMessage("SERVER: Игрок " + votedOut + " был изгнан!");
                 removePlayer(votedOut);
             }

@@ -10,10 +10,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
-import java.util.Random;
 
 public class MafiaLauncher extends Application {
     public static final String SERVER_IP = "127.0.0.1";
@@ -26,17 +24,13 @@ public class MafiaLauncher extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // Создаем основной контейнер VBox
         VBox layout = new VBox(20);
         layout.setAlignment(Pos.CENTER);
 
-        // Добавляем заголовок
         Button playButton = new Button("Готов");
 
-        // Обработка нажатия на кнопку "Готов"
         playButton.setOnAction(event -> {
             try {
-                // Создаем нового клиента и передаем ему Stage для отображения игры
                 Socket socket = new Socket(SERVER_IP, SERVER_PORT);
                 listenForStartCommand(socket);
             } catch (Exception e) {
@@ -44,10 +38,8 @@ public class MafiaLauncher extends Application {
             }
         });
 
-        // Добавляем элементы в контейнер
         layout.getChildren().addAll(new Label("Добро пожаловать в игру Мафия!"), playButton);
 
-        // Создаем сцену и показываем окно
         Scene scene = new Scene(layout, 400, 300);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Мафия");
